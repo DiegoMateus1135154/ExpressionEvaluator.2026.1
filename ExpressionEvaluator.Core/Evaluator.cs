@@ -1,4 +1,6 @@
-﻿namespace ExpressionEvaluator.Core;
+﻿using System.Globalization;
+
+namespace ExpressionEvaluator.Core;
 
 public class Evaluator
 {
@@ -10,59 +12,78 @@ public class Evaluator
 
     private static string InfixToPostfix(string infix)
     {
-        var postFix = string.Empty;
-        var stack = new Stack<char>();
-        foreach (var item in infix)
+        var stack = new Stack<char>(100);
+        var postfix = string.Empty;
+        var numberBuffer = string.Empty;
+
+        for (int i = 0; i < infix.Length; i++)
         {
-            if (IsOperator(item))
+            if (infix[i] == ' ')
+                continue;
+
+            if (char.IsDigit(infix[i]) || infix[i] == '.')
             {
-                if (stack.Count == 0)
-                {
-                    stack.Push(item);
-                }
-                else
-                {
-                    if (item == ')')
-                    {
-                        do
-                        {
-                            postFix += stack.Pop();
-                        } while (stack.Peek() != '(');
-                        stack.Pop();
-                    }
-                    else
-                    {
-                        if (PriorityInfix(item) > PriorityStack(stack.Peek()))
-                        {
-                            stack.Push(item);
-                        }
-                        else
-                        {
-                            postFix += stack.Pop();
-                            stack.Push(item);
-                        }
-                    }
-                }
+                numberBuffer += infix[i];
             }
             else
             {
-                postFix += item;
+                if (!string.IsNullOrEmpty(numberBuffer))
+                {
+                    postfix += numberBuffer + ' ';
+                    numberBuffer = string.Empty;
+                }
+
+                if (IsOperator(infix[i]))
+                {
+                    if (stack.Count == 0)
+                    {
+                        stack.Push(infix[i]);
+                    }
+                    else
+                    {
+                        if (infix[i] == ')')
+                        {
+                            do
+                            {
+                                postfix += stack.Pop();
+                            }
+                            while (stack.Peek() != '(');
+                            stack.Pop();
+                        }
+                        else
+                        {
+                            if (PriorityInfix(infix[i]) > PriorityStack(stack.Peek()))
+                            {
+                                stack.Push(infix[i]);
+                            }
+                            else
+                            {
+                                postfix += stack.Pop();
+                                stack.Push(infix[i]);
+                            }
+                        }
+                    }
+                }
             }
         }
-        while (stack.Count > 0)
+        if (!string.IsNullOrEmpty(numberBuffer))
         {
-            postFix += stack.Pop();
+            postfix += numberBuffer + " ";
         }
-        return postFix;
+        while (stack.Count != 0)
+        {
+            postfix += stack.Pop() + " ";
+        }
+        return postfix;
     }
+
+    private static bool IsOperator(char item) => "+-*/^()".Contains(item);
 
     private static int PriorityStack(char item) => item switch
     {
         '^' => 3,
-        '*' => 2,
-        '/' => 2,
-        '+' => 1,
-        '-' => 1,
+        '*' or '/' or '%' => 2,
+        '+' or '-' => 1,
         '(' => 0,
         _ => throw new Exception("Sintax error."),
     };
@@ -70,40 +91,53 @@ public class Evaluator
     private static int PriorityInfix(char item) => item switch
     {
         '^' => 4,
-        '*' => 2,
-        '/' => 2,
-        '+' => 1,
-        '-' => 1,
+        '*' or '/' or '%' => 2,
+        '+' or '-' => 1,
         '(' => 5,
         _ => throw new Exception("Sintax error."),
     };
 
     private static double EvaluatePostfix(string postfix)
     {
-        var stack = new Stack<double>();
-        foreach (char item in postfix)
+        var stack = new Stack<double>(100);
+        var numberBuffer = string.Empty;
+
+        for (int i = 0; i < postfix.Length; i++)
         {
-            if (IsOperator(item))
+            if (char.IsDigit(postfix[i]) || postfix[i] == '.')
             {
-                var b = stack.Pop();
-                var a = stack.Pop();
-                stack.Push(item switch
+                numberBuffer += postfix[i];
+            }
+            else if (postfix[i] == ' ')
+            {
+                if (!string.IsNullOrEmpty(numberBuffer))
                 {
-                    '+' => a + b,
-                    '-' => a - b,
-                    '*' => a * b,
-                    '/' => a / b,
-                    '^' => Math.Pow(a, b),
-                    _ => throw new Exception("Sintax error."),
-                });
+                    stack.Push(double.Parse(numberBuffer, CultureInfo.InvariantCulture));
+                    numberBuffer = string.Empty;
+                }
             }
-            else
+            else if (IsOperator(postfix[i]))
             {
-                stack.Push(double.Parse(item.ToString()));
+                var number2 = stack.Pop();
+                var number1 = stack.Pop();
+                var result = Calculate(number1, postfix[i], number2);
+                stack.Push(result);
             }
+        }
+        if (!string.IsNullOrEmpty(numberBuffer))
+        {
+            stack.Push(double.Parse(numberBuffer, CultureInfo.InvariantCulture));
         }
         return stack.Pop();
     }
 
-    private static bool IsOperator(char item) => "+-*/^()".Contains(item);
+    private static double Calculate(double number1, char item, double number2) => item switch
+    {
+        '^' => Math.Pow(number1, number2),
+        '*' => number1 * number2,
+        '/' => number1 / number2,
+        '+' => number1 + number2,
+        '-' => number1 - number2,
+        _ => throw new Exception("Invalid Operator"),
+    };
 }
