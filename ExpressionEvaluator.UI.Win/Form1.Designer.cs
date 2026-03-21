@@ -56,7 +56,7 @@
             // txtDisplay
             // 
             txtDisplay.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            txtDisplay.BackColor = SystemColors.HotTrack;
+            txtDisplay.BackColor = SystemColors.ControlLightLight;
             txtDisplay.Font = new Font("Comic Sans MS", 20.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             txtDisplay.Location = new Point(12, 12);
             txtDisplay.Name = "txtDisplay";
